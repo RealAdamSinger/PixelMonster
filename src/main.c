@@ -1,15 +1,16 @@
 #include <pebble.h>
 
-#define textColor PBL_IF_COLOR_ELSE(GColorGreen, GColorWhite)
+#define textColor PBL_IF_COLOR_ELSE(GColorDarkGreen, GColorWhite)
 
 static Window *window;
-static int xPos = 50, yPos = 50, xWait = 0,  yWait = 0, xDif = 0, yDif = 0, mSize=60, row=0, rG=60;
+static int xPos = 50, yPos = 50, xWait = 0,  yWait = 0, xDif = 0, yDif = 0, mSize=60, gRow=0, rG=60;
 static TextLayer *txtTroph, *txtAlignment, *txtWorldAlignment, *txtLevel, *txtXp, *txtRank, *txtName;
-static GFont fontMain;
-static Layer *windowLayer, *health, *armour, *background, *trophies, *alignment, *worldAlignment, *level, *xp, *rank, *name, *monsterBox, *monsterLayer;
+static GFont fontMain, fontFA;
+static Layer *windowLayer, *health, *armour, *background, *trophies, *alignment, *worldAlignment, *level, *xp, *rank, *name, *monsterBox;
 static PropertyAnimation *s_property_animation;
 static GColor monster[60][60];
 static Layer *monsterRow[60];
+
 typedef struct {
   GColor fillColor;
   GColor emptyColor;  
@@ -33,10 +34,13 @@ static double randf(double low,double high){
 
 ////////////////////////////////////////////////////////////////// DRAWING
 static void _drawMonster(Layer *layer, GContext *ctx) {      
+  RowContext *layerContext = (RowContext*)layer_get_data(layer);
+  int r = layerContext->row;
+// APP_LOG(APP_LOG_LEVEL_DEBUG, "ROWWWWWWWWWWWWWWWWWWWWWWWWWWWW %d", layerContext->row);
     for(int x=0; x < mSize; x++){   
       for(int y=0; y < 6; y++){   
-        graphics_context_set_stroke_color(ctx,  monster [x][row]);
-        graphics_draw_pixel(ctx, GPoint(x,0+y));              
+        graphics_context_set_stroke_color(ctx,  monster [x][r]);
+        graphics_draw_pixel(ctx, GPoint(x,y));              
       }    
     }    
 }
@@ -135,7 +139,15 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
   }  
 }
 
-
+static void textToLayer(TextLayer *textLayer, Layer *layer, GTextAlignment alignment, char *text, GFont font) {
+  textLayer = text_layer_create(layer_get_bounds(layer));
+  text_layer_set_font(textLayer, font); 
+  text_layer_set_text_alignment(textLayer, alignment);
+  text_layer_set_background_color(textLayer, GColorClear);
+  text_layer_set_text_color(textLayer, textColor);   
+  text_layer_set_text(textLayer, text);
+  layer_add_child(layer, text_layer_get_layer(textLayer));
+}
 
 //////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////
@@ -143,16 +155,20 @@ static void windowLoad(Window *window) {
   for(int x=0; x < mSize; x++){
     for(int y=0; y < mSize; y++){      
       monster[x][y] = PBL_IF_COLOR_ELSE(GColorFromRGB(y*x, y*3, x*3), GColorWhite);      
+//       monster[x][y] = ((x > 20 && x < 25) || (x > 30 && x < 35) || (x > 20 && x < 35 && y>5 && y<10)) ? GColorBlack : GColorClear;
     }
   }    
+   
   
+ 
   
   APP_LOG(APP_LOG_LEVEL_DEBUG, "RUNNING WINDOWLOAD()");
   // Get the root layer
   windowLayer = window_get_root_layer(window);
   
    // Create GFont  
-  fontMain = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_MAIN_11));  
+  fontMain = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_MAIN_8));  
+  fontFA = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FA_9));  
   
   //////////////////////////////////////////////////////////////////// Create Titles   
   APP_LOG(APP_LOG_LEVEL_DEBUG, "creating title layout");
@@ -170,12 +186,13 @@ static void windowLoad(Window *window) {
   drawTextRegion(rank);    
   drawTextRegion(alignment);    
   drawTextRegion(worldAlignment);
-  txtName = text_layer_create(layer_get_bounds(name));
-  text_layer_set_font(txtName, fontMain); 
-  text_layer_set_text_alignment(txtName, GTextAlignmentCenter);
-  text_layer_set_background_color(txtName, GColorClear);
-  text_layer_set_text_color(txtName, textColor);   
-  
+  textToLayer(txtName,name,GTextAlignmentCenter, "ADRAGE", fontMain);
+  textToLayer(txtLevel,level,GTextAlignmentLeft, "Lvl:", fontMain);
+  textToLayer(txtXp,xp,GTextAlignmentLeft, "XPx:", fontMain);
+  textToLayer(txtTroph,trophies,GTextAlignmentLeft, "", fontFA);
+  textToLayer(txtRank,rank,GTextAlignmentLeft, "Disgusting Worm",fontMain);
+  textToLayer(txtAlignment,alignment,GTextAlignmentLeft, "Evil",fontMain);
+  textToLayer(txtWorldAlignment,worldAlignment,GTextAlignmentLeft, "",fontFA);
   
   
   //////////////////////////////////////////////////////////////////// Create Monster Container
@@ -219,11 +236,11 @@ static void init() {
     .pebble_app_connection_handler = bt_handler
   });  
   for(int r=0; r < mSize; r++){
-    row = r;
-    monsterRow[row] = layer_create(GRect(xPos, yPos+row, 60, 1));   
-    RowContext *layerContext = (RowContext*)layer_get_data(monsterRow[row]);
-    layerContext->row = row;
-    drawMonster(monsterRow[row]);
+    gRow = r;
+    monsterRow[r] = layer_create_with_data(GRect(xPos, yPos+r, mSize, 1),sizeof(RowContext));   
+    RowContext *layerContext = (RowContext*)layer_get_data(monsterRow[r]);
+    layerContext->row = r;    
+    drawMonster(monsterRow[r]);
   }  
   // Register with TickTimerService
     tick_timer_service_subscribe(SECOND_UNIT, tick_handler);

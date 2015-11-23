@@ -9,8 +9,13 @@
     "resources": {
         "media": [
             {
+                "file": "fonts/fontawesome-webfont.ttf",
+                "name": "FA_9",
+                "type": "font"
+            },
+            {
                 "file": "fonts/Wellfleet-Regular.ttf",
-                "name": "FONT_MAIN_11",
+                "name": "FONT_MAIN_8",
                 "type": "font"
             }
         ]
@@ -18,7 +23,6 @@
     "sdkVersion": "3",
     "shortName": "Pixel Monster",
     "targetPlatforms": [
-        "aplite",
         "basalt"
     ],
     "uuid": "3cc5014c-4482-44cb-a6bc-079b13648452",
